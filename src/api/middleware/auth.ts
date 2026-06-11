@@ -25,14 +25,12 @@ export async function telegramAuth(
 
   const auth = await validateInitData(initData, config.botToken);
   if (!auth) {
-    if (config.nodeEnv === "development") {
-      console.warn(
-        "initData rejected",
-        initData.slice(0, 80) + "...",
-        "hasHash=" + initData.includes("hash="),
-        "hasSignature=" + initData.includes("signature="),
-      );
-    }
+    console.warn(
+      "initData rejected",
+      "hasHash=" + initData.includes("hash="),
+      "hasSignature=" + initData.includes("signature="),
+      "botId=" + config.botToken.split(":")[0],
+    );
     res.status(401).json({ error: "Invalid initData" });
     return;
   }
