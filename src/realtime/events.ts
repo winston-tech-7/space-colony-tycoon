@@ -5,6 +5,7 @@ export async function publishEvent(
   event: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
+  if (!redis) return;
   try {
     await redis.publish(
       `colony:${userId}`,
