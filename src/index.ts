@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { webhookCallback } from "grammy";
 import { createApp } from "./api/app.js";
@@ -10,6 +10,17 @@ import { resolveExpiredWars } from "./modes/guild/service.js";
 import { setIo } from "./realtime/io.js";
 import { createSocketServer } from "./realtime/socket.js";
 
+function runCommand(command: string, args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: "inherit", shell: true });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${command} exited with code ${code}`));
+    });
+  });
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -18,7 +29,7 @@ async function migrateDatabase(): Promise<void> {
   for (let attempt = 1; attempt <= 15; attempt++) {
     try {
       console.log(`prisma db push (${attempt}/15)...`);
-      execSync("npx prisma db push --skip-generate", { stdio: "inherit" });
+      await runCommand("npx", ["prisma", "db", "push", "--skip-generate"]);
       return;
     } catch {
       if (attempt === 15) throw new Error("prisma db push failed");
@@ -37,25 +48,10 @@ async function waitForDatabase(): Promise<boolean> {
   return false;
 }
 
-async function main(): Promise<void> {
-  assertRuntimeConfig();
-
-  const app = createApp();
-  const httpServer = createServer(app);
-  const io = createSocketServer(httpServer);
-  setIo(io);
-
-  await new Promise<void>((resolve, reject) => {
-    httpServer.listen(config.port, "0.0.0.0", () => {
-      console.log(`HTTP + WebSocket on :${config.port}`);
-      if (config.webappUrl) {
-        console.log(`Public URL: ${config.webappUrl}`);
-      }
-      resolve();
-    });
-    httpServer.on("error", reject);
-  });
-
+async function bootstrap(
+  app: ReturnType<typeof createApp>,
+  io: ReturnType<typeof createSocketServer>,
+): Promise<void> {
   await migrateDatabase();
   const dbOk = await waitForDatabase();
   const redisOk = await checkRedis();
@@ -123,6 +119,31 @@ async function main(): Promise<void> {
   }
 
   console.log(`Socket.io ready (${io.engine.clientsCount} clients)`);
+}
+
+async function main(): Promise<void> {
+  assertRuntimeConfig();
+
+  const app = createApp();
+  const httpServer = createServer(app);
+  const io = createSocketServer(httpServer);
+  setIo(io);
+
+  await new Promise<void>((resolve, reject) => {
+    httpServer.listen(config.port, "0.0.0.0", () => {
+      console.log(`HTTP + WebSocket on :${config.port}`);
+      if (config.webappUrl) {
+        console.log(`Public URL: ${config.webappUrl}`);
+      }
+      resolve();
+    });
+    httpServer.on("error", reject);
+  });
+
+  void bootstrap(app, io).catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }
 
 main().catch((err) => {
