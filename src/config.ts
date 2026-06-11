@@ -34,7 +34,9 @@ export const config = {
   starsEnabled: optional("STARS_ENABLED", "0") === "1",
   premiumPlanetStars: Number(optional("PREMIUM_PLANET_STARS", "50")),
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
-  usePolling: optional("USE_POLLING", "0") === "1" || !webappUrl,
+  usePolling:
+    optional("NODE_ENV", "development") !== "production" &&
+    (optional("USE_POLLING", "0") === "1" || !webappUrl),
 } as const;
 
 export function assertRuntimeConfig(): void {

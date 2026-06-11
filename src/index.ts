@@ -79,8 +79,8 @@ async function bootstrap(
 
   if (config.usePolling) {
     await bot.api.deleteWebhook({ drop_pending_updates: true }).catch(() => {});
-    console.log("Using long polling (dev). Set WEBAPP_URL for webhook.");
-    bot.start({
+    console.log("Using long polling (local dev only).");
+    void bot.start({
       allowed_updates: [
         "message",
         "inline_query",
