@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { createServer } from "node:http";
 import { webhookCallback } from "grammy";
 import { createApp } from "./api/app.js";
@@ -9,38 +10,72 @@ import { resolveExpiredWars } from "./modes/guild/service.js";
 import { setIo } from "./realtime/io.js";
 import { createSocketServer } from "./realtime/socket.js";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function migrateDatabase(): Promise<void> {
+  for (let attempt = 1; attempt <= 15; attempt++) {
+    try {
+      console.log(`prisma db push (${attempt}/15)...`);
+      execSync("npx prisma db push --skip-generate", { stdio: "inherit" });
+      return;
+    } catch {
+      if (attempt === 15) throw new Error("prisma db push failed");
+      console.warn("db push failed, retrying in 3s...");
+      await sleep(3000);
+    }
+  }
+}
+
+async function waitForDatabase(): Promise<boolean> {
+  for (let attempt = 1; attempt <= 20; attempt++) {
+    if (await checkDatabase()) return true;
+    console.warn(`PostgreSQL not ready (${attempt}/20), retrying...`);
+    await sleep(3000);
+  }
+  return false;
+}
+
 async function main(): Promise<void> {
   assertRuntimeConfig();
-
-  const dbOk = await checkDatabase();
-  const redisOk = await checkRedis();
-
-  if (!dbOk) {
-    console.error(
-      "PostgreSQL unavailable. Run: docker compose up -d && npx prisma db push",
-    );
-    process.exit(1);
-  }
-
-  console.log(`PostgreSQL: ok | Redis: ${redisOk ? "ok" : "optional/offline"}`);
-
-  const bot = createBot();
-  await initBot(bot);
 
   const app = createApp();
   const httpServer = createServer(app);
   const io = createSocketServer(httpServer);
   setIo(io);
 
+  await new Promise<void>((resolve, reject) => {
+    httpServer.listen(config.port, "0.0.0.0", () => {
+      console.log(`HTTP + WebSocket on :${config.port}`);
+      if (config.webappUrl) {
+        console.log(`Public URL: ${config.webappUrl}`);
+      }
+      resolve();
+    });
+    httpServer.on("error", reject);
+  });
+
+  await migrateDatabase();
+  const dbOk = await waitForDatabase();
+  const redisOk = await checkRedis();
+
+  if (!dbOk) {
+    console.error("PostgreSQL unavailable after retries");
+    process.exit(1);
+  }
+
+  console.log(`PostgreSQL: ok | Redis: ${redisOk ? "ok" : "optional/offline"}`);
+
+  const bot = createBot();
   const webhookPath = `/webhook/${config.webhookSecret}`;
   app.post(webhookPath, webhookCallback(bot, "express"));
 
-  httpServer.listen(config.port, "0.0.0.0", () => {
-    console.log(`HTTP + WebSocket on :${config.port}`);
-    if (config.webappUrl) {
-      console.log(`Public URL: ${config.webappUrl}`);
-    }
-  });
+  try {
+    await initBot(bot);
+  } catch (err) {
+    console.warn("Bot init deferred:", err);
+  }
 
   setInterval(() => {
     resolveExpiredWars().catch(console.error);
@@ -67,7 +102,7 @@ async function main(): Promise<void> {
 
   if (isLocal) {
     console.log(`Local dev: http://localhost:${config.port} (webhook skipped)`);
-  } else {
+  } else if (config.webappUrl) {
     try {
       await bot.api.setWebhook(webhookUrl, {
         allowed_updates: [
@@ -81,7 +116,12 @@ async function main(): Promise<void> {
     } catch (err) {
       console.warn("Webhook setup failed:", err);
     }
+  } else {
+    console.warn(
+      "No public URL yet — generate Railway domain, then redeploy for webhook",
+    );
   }
+
   console.log(`Socket.io ready (${io.engine.clientsCount} clients)`);
 }
 

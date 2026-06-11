@@ -35,4 +35,4 @@ COPY --from=builder /app/mini-app/dist ./mini-app/dist
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma db push && node dist/index.js"]
+CMD ["node", "dist/index.js"]
