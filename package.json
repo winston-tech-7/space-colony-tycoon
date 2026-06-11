@@ -1,0 +1,50 @@
+{
+  "name": "space-colony-tycoon",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Space Colony Tycoon 2.0 — Telegram MMO Bot + Mini App",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:poll": "tsx watch src/index.ts --poll",
+    "build": "npm run build:mini-app && tsc",
+    "build:mini-app": "vite build --config mini-app/vite.config.ts",
+    "start": "node dist/index.js",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "stack:start": "node scripts/start-stack.mjs",
+    "stack:stop": "node scripts/stop-stack.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "@telegram-apps/init-data-node": "^2.0.10",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "grammy": "^1.35.0",
+    "ioredis": "^5.6.0",
+    "openai": "^4.86.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "prisma": "^6.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "socket.io-client": "^4.8.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2"
+  }
+}

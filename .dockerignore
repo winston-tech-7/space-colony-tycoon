@@ -1,0 +1,17 @@
+node_modules
+dist
+mini-app/dist
+.pgdata
+.logs
+.stack
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+README.md
+docs
+scripts/start-stack.mjs
+scripts/stop-stack.mjs
+scripts/stack-utils.mjs

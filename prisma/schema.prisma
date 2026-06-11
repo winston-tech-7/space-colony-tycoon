@@ -1,0 +1,330 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PremiumTier {
+  free
+  basic
+  admiral
+  emperor
+}
+
+enum Rarity {
+  common
+  uncommon
+  rare
+  legendary
+}
+
+enum Stage {
+  egg
+  juvenile
+  adult
+  evolved
+}
+
+enum GuildRole {
+  leader
+  officer
+  member
+}
+
+enum WarStatus {
+  pending
+  active
+  completed
+}
+
+enum ListingType {
+  fixed
+  auction
+}
+
+enum ExpeditionStatus {
+  open
+  in_progress
+  completed
+}
+
+model User {
+  telegramId       BigInt      @id @map("telegram_id")
+  username         String?
+  firstName        String      @map("first_name")
+  premiumTier      PremiumTier @default(free) @map("premium_tier")
+  aiAdvisorEnabled Boolean     @default(false) @map("ai_advisor_enabled")
+  referralCode     String?     @unique @map("referral_code")
+  referredBy       BigInt?     @map("referred_by")
+  credits          Int         @default(50)
+  createdAt        DateTime    @default(now()) @map("created_at")
+  lastSeenAt       DateTime    @default(now()) @map("last_seen_at")
+
+  colonies              Colony[]
+  creatures             Creature[]
+  guildMemberships      GuildMember[]
+  ledGuilds             Guild[]              @relation("GuildLeader")
+  battlesAsP1           Battle[]             @relation("BattleP1")
+  battlesAsP2           Battle[]             @relation("BattleP2")
+  expeditionParticipants ExpeditionParticipant[]
+  marketListings        MarketListing[]      @relation("Seller")
+  purchases             Transaction[]        @relation("Buyer")
+  sales                 Transaction[]        @relation("Seller")
+  aiInteractions        AiInteraction[]
+  achievements          UserAchievement[]
+  seasonalProgress      SeasonalProgress[]
+
+  @@map("users")
+}
+
+model Colony {
+  id            Int      @id @default(autoincrement())
+  userId        BigInt   @map("user_id")
+  planetId      String   @map("planet_id")
+  planetName    String   @map("planet_name")
+  planetType    String   @default("terran") @map("planet_type")
+  level         Int      @default(1)
+  isPremium     Boolean  @default(false) @map("is_premium")
+  energy        Int      @default(100)
+  minerals      Int      @default(0)
+  bioMatter     Int      @default(0) @map("bio_matter")
+  lastCollected DateTime @default(now()) @map("last_collected")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+  creatures Creature[]
+
+  @@unique([userId, planetId])
+  @@index([userId])
+  @@map("colonies")
+}
+
+model Creature {
+  id                Int     @id @default(autoincrement())
+  ownerId           BigInt  @map("owner_id")
+  colonyId          Int     @map("colony_id")
+  speciesId         String  @map("species_id")
+  name              String
+  rarity            Rarity
+  stage             Stage   @default(egg)
+  hunger            Int     @default(40)
+  evolutionProgress Int     @default(0) @map("evolution_progress")
+  traitsJson        Json    @default("{}") @map("traits_json")
+  nftTokenId        String? @map("nft_token_id")
+  listed            Boolean @default(false)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  owner          User            @relation(fields: [ownerId], references: [telegramId], onDelete: Cascade)
+  colony         Colony          @relation(fields: [colonyId], references: [id], onDelete: Cascade)
+  marketListings MarketListing[]
+  nftMetadata    NftMetadata?
+
+  @@index([ownerId])
+  @@index([colonyId])
+  @@index([rarity])
+  @@map("creatures")
+}
+
+model Guild {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  tag         String   @unique
+  leaderId    BigInt   @map("leader_id")
+  memberCount Int      @default(1) @map("member_count")
+  powerRating Int      @default(0) @map("power_rating")
+  sharedLevel Int      @default(1) @map("shared_level")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  leader  User          @relation("GuildLeader", fields: [leaderId], references: [telegramId])
+  members GuildMember[]
+  warsAs1 GuildWar[]    @relation("GuildWar1")
+  warsAs2 GuildWar[]    @relation("GuildWar2")
+  wins    GuildWar[]    @relation("GuildWarWinner")
+
+  @@map("guilds")
+}
+
+model GuildMember {
+  guildId  Int       @map("guild_id")
+  userId   BigInt    @map("user_id")
+  role     GuildRole @default(member)
+  joinedAt DateTime  @default(now()) @map("joined_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+
+  @@id([guildId, userId])
+  @@map("guild_members")
+}
+
+model GuildWar {
+  id          Int       @id @default(autoincrement())
+  season      Int
+  guild1Id    Int       @map("guild1_id")
+  guild2Id    Int       @map("guild2_id")
+  status      WarStatus @default(pending)
+  guild1Score Int       @default(0) @map("guild1_score")
+  guild2Score Int       @default(0) @map("guild2_score")
+  winnerId    Int?      @map("winner_id")
+  rewardsJson Json      @default("{}") @map("rewards_json")
+  startsAt    DateTime  @map("starts_at")
+  endsAt      DateTime  @map("ends_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  guild1 Guild  @relation("GuildWar1", fields: [guild1Id], references: [id])
+  guild2 Guild  @relation("GuildWar2", fields: [guild2Id], references: [id])
+  winner Guild? @relation("GuildWarWinner", fields: [winnerId], references: [id])
+
+  @@index([season])
+  @@map("guild_wars")
+}
+
+model Battle {
+  id          Int      @id @default(autoincrement())
+  player1Id   BigInt   @map("player1_id")
+  player2Id   BigInt   @map("player2_id")
+  creature1Id Int      @map("creature1_id")
+  creature2Id Int?     @map("creature2_id")
+  winnerId    BigInt?  @map("winner_id")
+  status      String   @default("pending")
+  turn        Int      @default(0)
+  p1Hp        Int      @default(100) @map("p1_hp")
+  p2Hp        Int      @default(100) @map("p2_hp")
+  currentTurn BigInt?  @map("current_turn")
+  logJson     Json     @default("[]") @map("log_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  player1 User @relation("BattleP1", fields: [player1Id], references: [telegramId])
+  player2 User @relation("BattleP2", fields: [player2Id], references: [telegramId])
+
+  @@index([player1Id])
+  @@index([player2Id])
+  @@index([status])
+  @@map("battles")
+}
+
+model Expedition {
+  id             Int              @id @default(autoincrement())
+  planetSeed     String           @map("planet_seed")
+  planetName     String           @map("planet_name")
+  maxPlayers     Int              @default(4) @map("max_players")
+  currentPlayers Int              @default(0) @map("current_players")
+  status         ExpeditionStatus @default(open)
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  participants ExpeditionParticipant[]
+
+  @@map("expeditions")
+}
+
+model ExpeditionParticipant {
+  expeditionId  Int  @map("expedition_id")
+  userId        BigInt @map("user_id")
+  creaturesJson Json @default("[]") @map("creatures_json")
+  rewardsJson   Json @default("{}") @map("rewards_json")
+
+  expedition Expedition @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+
+  @@id([expeditionId, userId])
+  @@map("expedition_participants")
+}
+
+model MarketListing {
+  id          Int         @id @default(autoincrement())
+  sellerId    BigInt      @map("seller_id")
+  creatureId  Int         @map("creature_id")
+  priceStars  Int         @default(0) @map("price_stars")
+  priceCredits Int        @default(0) @map("price_credits")
+  listingType ListingType @default(fixed) @map("listing_type")
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  seller   User      @relation("Seller", fields: [sellerId], references: [telegramId])
+  creature Creature  @relation(fields: [creatureId], references: [id])
+  transactions Transaction[]
+
+  @@index([active])
+  @@map("market_listings")
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  buyerId   BigInt   @map("buyer_id")
+  sellerId  BigInt   @map("seller_id")
+  itemType  String   @map("item_type")
+  itemId    Int      @map("item_id")
+  pricePaid Int      @map("price_paid")
+  currency  String   @default("credits")
+  listingId Int?     @map("listing_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  buyer   User           @relation("Buyer", fields: [buyerId], references: [telegramId])
+  seller  User           @relation("Seller", fields: [sellerId], references: [telegramId])
+  listing MarketListing? @relation(fields: [listingId], references: [id])
+
+  @@map("transactions")
+}
+
+model NftMetadata {
+  tokenId      String  @id @map("token_id")
+  creatureId   Int     @unique @map("creature_id")
+  traitsHash   String  @map("traits_hash")
+  rarityScore  Float   @map("rarity_score")
+
+  creature Creature @relation(fields: [creatureId], references: [id])
+
+  @@map("nft_metadata")
+}
+
+model AiInteraction {
+  id          Int      @id @default(autoincrement())
+  userId      BigInt   @map("user_id")
+  contextHash String   @map("context_hash")
+  adviceGiven String   @map("advice_given")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ai_interactions")
+}
+
+model Achievement {
+  id          String @id
+  name        String
+  description String
+  mode        String
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  userId        BigInt   @map("user_id")
+  achievementId String   @map("achievement_id")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at")
+
+  user        User        @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@id([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model SeasonalProgress {
+  userId      BigInt @map("user_id")
+  seasonId    Int    @map("season_id")
+  mode        String
+  points      Int    @default(0)
+  tierReached Int    @default(0) @map("tier_reached")
+
+  user User @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+
+  @@id([userId, seasonId, mode])
+  @@map("seasonal_progress")
+}

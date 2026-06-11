@@ -1,0 +1,9 @@
+node_modules/
+dist/
+mini-app/dist/
+.env
+*.log
+.pgdata/
+.logs/
+.stack/
+.DS_Store
