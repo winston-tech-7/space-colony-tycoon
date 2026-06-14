@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import {
   isValid3rd,
   parse,
@@ -21,66 +20,22 @@ export interface ValidatedInitData {
   startParam?: string;
 }
 
+type ParsedInitData = ReturnType<typeof parse>;
+
 function botIdFromToken(botToken: string): number | null {
   const id = Number(botToken.split(":")[0]);
   return Number.isFinite(id) ? id : null;
 }
 
-/** Telegram expects URL-encoded values in the data-check string (not decoded). */
-function buildRawDataCheckString(
-  initData: string,
-  exclude: Set<string>,
-): string {
-  return initData
-    .split("&")
-    .filter((chunk) => {
-      const key = chunk.split("=")[0] ?? "";
-      return key && !exclude.has(key);
-    })
-    .sort((a, b) =>
-      (a.split("=")[0] ?? "").localeCompare(b.split("=")[0] ?? ""),
-    )
-    .join("\n");
-}
-
-function validateHmacRaw(
-  initData: string,
-  botToken: string,
-  maxAgeSeconds: number,
-): boolean {
-  const hash = initData
-    .split("&")
-    .find((p) => p.startsWith("hash="))
-    ?.slice(5);
-  if (!hash) return false;
-
-  const authChunk = initData.split("&").find((p) => p.startsWith("auth_date="));
-  const authDate = Number(authChunk?.slice("auth_date=".length));
-  if (!authDate || Date.now() / 1000 - authDate > maxAgeSeconds) {
-    return false;
-  }
-
-  const secretKey = crypto
-    .createHmac("sha256", "WebAppData")
-    .update(botToken.trim())
-    .digest();
-
-  for (const exclude of [new Set(["hash"]), new Set(["hash", "signature"])]) {
-    const dataCheckString = buildRawDataCheckString(initData, exclude);
-    const calculated = crypto
-      .createHmac("sha256", secretKey)
-      .update(dataCheckString)
-      .digest("hex");
-    if (calculated === hash) return true;
-  }
-
-  return false;
-}
-
 function toValidated(initData: string): ValidatedInitData | null {
-  const parsed = parse(initData);
+  const parsed = parse(initData) as ParsedInitData & {
+    auth_date?: Date;
+    query_id?: string;
+    start_param?: string;
+  };
+
   const user = parsed.user as TelegramWebAppUser | undefined;
-  const authDate = parsed.authDate as Date | undefined;
+  const authDate = parsed.auth_date;
   if (!user || !authDate) return null;
 
   return {
@@ -93,8 +48,8 @@ function toValidated(initData: string): ValidatedInitData | null {
       is_premium: user.is_premium,
     },
     authDate: Math.floor(authDate.getTime() / 1000),
-    queryId: parsed.queryId as string | undefined,
-    startParam: parsed.startParam as string | undefined,
+    queryId: parsed.query_id,
+    startParam: parsed.start_param,
   };
 }
 
@@ -108,15 +63,11 @@ export async function validateInitData(
   const token = botToken.trim();
   const options = { expiresIn: maxAgeSeconds };
 
-  if (validateHmacRaw(initData, token, maxAgeSeconds)) {
-    return toValidated(initData);
-  }
-
   try {
     validate(initData, token, options);
     return toValidated(initData);
   } catch {
-    /* try library / Ed25519 paths */
+    /* try Ed25519 signature validation */
   }
 
   const botId = botIdFromToken(token);
