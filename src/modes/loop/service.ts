@@ -15,8 +15,8 @@ const WHEEL_PRIZES = [
   { id: "credits_200", weight: 10, label: "+200 кредитов", credits: 200 },
 ] as const;
 
-function pickRarity(seed: number): Rarity {
-  const roll = seed % 100;
+function pickRarity(seed: number, boostLevel = 0): Rarity {
+  const roll = (seed % 100) - boostLevel * 7;
   if (roll < 3) return Rarity.legendary;
   if (roll < 15) return Rarity.rare;
   if (roll < 40) return Rarity.uncommon;
@@ -156,7 +156,8 @@ export async function crackEgg(
     const now = Date.now();
     if (egg.readyAt.getTime() > now) throw new Error("Яйцо ещё инкубируется");
 
-    const rarityTier = egg.rarityTier ?? pickRarity(egg.id * 131 + Number(userId));
+    const rarityTier =
+      egg.rarityTier ?? pickRarity(egg.id * 131 + Number(userId), egg.boostLevel);
     const species = speciesForRarity(rarityTier);
     const colony = await tx.colony.findFirst({ where: { userId } });
     if (!colony) throw new Error("Колония не найдена");

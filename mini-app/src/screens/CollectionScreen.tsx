@@ -30,6 +30,7 @@ interface Props {
 export function CollectionScreen({ profile, initData, onRefresh, onHaptic }: Props) {
   const [eggs, setEggs] = useState<Egg[]>(profile.eggs ?? []);
   const [cracking, setCracking] = useState<number | null>(null);
+  const [upgrading, setUpgrading] = useState<string | null>(null);
   const [reveal, setReveal] = useState<string | null>(null);
   const [, tick] = useState(0);
 
@@ -51,6 +52,40 @@ export function CollectionScreen({ profile, initData, onRefresh, onHaptic }: Pro
     return () => clearInterval(timer);
   }, [loadEggs]);
 
+  async function upgradeEgg(egg: Egg) {
+    setUpgrading(`egg-${egg.id}`);
+    setReveal(null);
+    try {
+      await api("/api/eggs/upgrade", initData, {
+        method: "POST",
+        body: JSON.stringify({ eggId: egg.id }),
+      });
+      setReveal("Инкубация ускорена! +шанс редкости при вскрытии");
+      await loadEggs();
+      onRefresh();
+    } catch (e) {
+      setReveal(e instanceof Error ? e.message : "Ошибка прокачки");
+    } finally {
+      setUpgrading(null);
+    }
+  }
+
+  async function upgradeCreature(creatureId: number) {
+    setUpgrading(`creature-${creatureId}`);
+    setReveal(null);
+    try {
+      await api("/api/creatures/upgrade", initData, {
+        method: "POST",
+        body: JSON.stringify({ creatureId }),
+      });
+      setReveal("Сила существа повышена!");
+      onRefresh();
+    } catch (e) {
+      setReveal(e instanceof Error ? e.message : "Ошибка прокачки");
+    } finally {
+      setUpgrading(null);
+    }
+  }
   async function crackEgg(egg: Egg) {
     if (!isEggReady(egg)) {
       setReveal("Яйцо ещё инкубируется — подождите");
@@ -110,16 +145,31 @@ export function CollectionScreen({ profile, initData, onRefresh, onHaptic }: Pro
                 <span className="egg-icon">{ready ? "✨" : "🥚"}</span>
                 <div>
                   <strong>Яйцо #{egg.id}</strong>
-                  <small>{eggStatus(egg)}</small>
+                  <small>
+                    {eggStatus(egg)}
+                    {(egg.boostLevel ?? 0) > 0 && ` · Буст ${egg.boostLevel}`}
+                  </small>
                 </div>
-                <button
-                  type="button"
-                  className="primary-btn compact"
-                  disabled={cracking === egg.id}
-                  onClick={() => crackEgg(egg)}
-                >
-                  {cracking === egg.id ? "..." : ready ? "Вскрыть" : "Ждём"}
-                </button>
+                <div className="egg-actions">
+                  {!ready && (egg.boostLevel ?? 0) < 5 && (
+                    <button
+                      type="button"
+                      className="secondary-btn compact"
+                      disabled={upgrading !== null}
+                      onClick={() => upgradeEgg(egg)}
+                    >
+                      {upgrading === `egg-${egg.id}` ? "..." : "🧬 Ускорить"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="primary-btn compact"
+                    disabled={cracking === egg.id}
+                    onClick={() => crackEgg(egg)}
+                  >
+                    {cracking === egg.id ? "..." : ready ? "Вскрыть" : "Ждём"}
+                  </button>
+                </div>
               </article>
             );
           })}
@@ -136,10 +186,20 @@ export function CollectionScreen({ profile, initData, onRefresh, onHaptic }: Pro
             <article key={c.id} className="creature-card compact">
               <span className="creature-avatar">{EMOJI[c.speciesId] ?? "👽"}</span>
               <strong>{c.name}</strong>
-              <small>{c.rarity}</small>
+              <small>
+                {c.rarity} · сила {(c.powerLevel ?? 1)}
+              </small>
               <div className="progress">
                 <div className="progress-bar" style={{ width: `${c.evolutionProgress}%` }} />
               </div>
+              <button
+                type="button"
+                className="secondary-btn compact"
+                disabled={upgrading !== null}
+                onClick={() => upgradeCreature(c.id)}
+              >
+                {upgrading === `creature-${c.id}` ? "..." : "⛏🧬 Усилить"}
+              </button>
             </article>
           ))}
         </div>

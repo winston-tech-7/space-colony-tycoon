@@ -3,6 +3,7 @@ import { prisma } from "../../db/prisma.js";
 import { claimIdempotencyKey } from "../../db/idempotency.js";
 import { bumpQuest } from "../loop/quests.js";
 import { publishEvent } from "../../realtime/events.js";
+import { computeColonyYield } from "../planets/catalog.js";
 
 export const SPECIES = [
   { id: "zephyr", name: "Zephyr Mite", rarity: Rarity.common, emoji: "🟢" },
@@ -24,17 +25,11 @@ export function speciesById(id: string) {
   return SPECIES.find((s) => s.id === id);
 }
 
-function idleYield(minutes: number, isPremium: boolean): {
-  energy: number;
-  minerals: number;
-  bioMatter: number;
-} {
-  const mult = isPremium ? 2 : 1;
-  return {
-    energy: Math.min(100, Math.floor(minutes * 0.5 * mult)),
-    minerals: Math.floor(minutes * 0.3 * mult),
-    bioMatter: Math.floor(minutes * 0.2 * mult),
-  };
+function idleYield(
+  colony: { planetId: string; mineLevel: number; bioLabLevel: number; isPremium: boolean },
+  minutes: number,
+) {
+  return computeColonyYield(colony, minutes);
 }
 
 export async function ensureUser(
@@ -124,7 +119,7 @@ export async function collectIdleResources(telegramId: bigint) {
     const minutes = Math.floor((now - colony.lastCollected.getTime()) / 60_000);
     if (minutes < 1) continue;
 
-    const yield_ = idleYield(minutes, colony.isPremium);
+    const yield_ = idleYield(colony, minutes);
     await prisma.colony.update({
       where: { id: colony.id },
       data: {
@@ -255,11 +250,16 @@ export function computePowerRating(
   };
 
   const creaturePower = profile.creatures.reduce(
-    (sum, c) => sum + rarityScore[c.rarity] + STAGE_ORDER.indexOf(c.stage),
+    (sum, c) =>
+      sum +
+      rarityScore[c.rarity] +
+      STAGE_ORDER.indexOf(c.stage) +
+      (c.powerLevel ?? 1) * 2,
     0,
   );
   const colonyPower = profile.colonies.reduce(
-    (sum, c) => sum + c.level * 5 + c.minerals,
+    (sum, c) =>
+      sum + c.level * 5 + (c.mineLevel ?? 1) * 3 + (c.bioLabLevel ?? 1) * 2,
     0,
   );
   return creaturePower + colonyPower;

@@ -47,6 +47,15 @@ import {
   spinWheel,
   syncEggStatuses,
 } from "../modes/loop/service.js";
+import {
+  getPlanetEconomy,
+  upgradeMine,
+  upgradeBioLab,
+  unlockPlanet,
+  raidPlanet,
+  upgradeCreature,
+  upgradeEgg,
+} from "../modes/planets/service.js";
 import { telegramAuth, type AuthedRequest } from "./middleware/auth.js";
 
 export const apiRouter = Router();
@@ -93,6 +102,77 @@ apiRouter.post("/colony/feed", telegramAuth, async (req: AuthedRequest, res) => 
 apiRouter.get("/colony", telegramAuth, async (req: AuthedRequest, res) => {
   const profile = await getProfile(BigInt(req.telegramAuth!.user.id));
   res.json({ profile });
+});
+
+apiRouter.get("/planets", telegramAuth, async (req: AuthedRequest, res) => {
+  const economy = await getPlanetEconomy(BigInt(req.telegramAuth!.user.id));
+  res.json(economy);
+});
+
+apiRouter.post("/planets/unlock", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { planetId } = req.body as { planetId?: string };
+    if (!planetId) return res.status(400).json({ error: "planetId required" });
+    const economy = await unlockPlanet(BigInt(req.telegramAuth!.user.id), planetId);
+    res.json(economy);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.post("/planets/raid", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { planetId } = req.body as { planetId?: string };
+    if (!planetId) return res.status(400).json({ error: "planetId required" });
+    const result = await raidPlanet(BigInt(req.telegramAuth!.user.id), planetId);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.post("/colony/mine/upgrade", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { colonyId } = req.body as { colonyId?: number };
+    if (!colonyId) return res.status(400).json({ error: "colonyId required" });
+    const economy = await upgradeMine(BigInt(req.telegramAuth!.user.id), colonyId);
+    res.json(economy);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.post("/colony/biolab/upgrade", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { colonyId } = req.body as { colonyId?: number };
+    if (!colonyId) return res.status(400).json({ error: "colonyId required" });
+    const economy = await upgradeBioLab(BigInt(req.telegramAuth!.user.id), colonyId);
+    res.json(economy);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.post("/creatures/upgrade", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { creatureId } = req.body as { creatureId?: number };
+    if (!creatureId) return res.status(400).json({ error: "creatureId required" });
+    const profile = await upgradeCreature(BigInt(req.telegramAuth!.user.id), creatureId);
+    res.json({ profile });
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.post("/eggs/upgrade", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { eggId } = req.body as { eggId?: number };
+    if (!eggId) return res.status(400).json({ error: "eggId required" });
+    const profile = await upgradeEgg(BigInt(req.telegramAuth!.user.id), eggId);
+    res.json({ profile });
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
 });
 
 apiRouter.get("/guild/me", telegramAuth, async (req: AuthedRequest, res) => {

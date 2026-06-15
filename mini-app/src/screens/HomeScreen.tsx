@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../api/client";
 import { PlanetCanvas } from "../components/PlanetCanvas";
+import { PlanetsPanel } from "../components/PlanetsPanel";
 import type { Profile } from "../types";
 
 const EMOJI: Record<string, string> = {
@@ -102,10 +103,16 @@ export function HomeScreen({ profile, initData, onRefresh, onNavigate }: Props) 
       </section>
 
       <section className="stats-row">
-        <div className="stat-tile"><span>⛏</span><strong>{colony?.minerals ?? 0}</strong><small>Минералы</small></div>
-        <div className="stat-tile"><span>🧬</span><strong>{colony?.bioMatter ?? 0}</strong><small>Биомасса</small></div>
+        <div className="stat-tile" title="Добываются шахтой на планетах и рейдах">
+          <span>⛏</span><strong>{colony?.minerals ?? 0}</strong><small>Минералы</small>
+        </div>
+        <div className="stat-tile" title="Добывается биолабом, тратится на прокачку">
+          <span>🧬</span><strong>{colony?.bioMatter ?? 0}</strong><small>Биомасса</small>
+        </div>
         <div className="stat-tile accent"><span>👽</span><strong>{profile.creatures.length}</strong><small>Существа</small></div>
       </section>
+
+      <PlanetsPanel initData={initData} colonyId={colony?.id} onRefresh={onRefresh} />
 
       {msg && <p className="status toast">{msg}</p>}
 

@@ -436,6 +436,70 @@ body {
 .stat-tile small { color: var(--hint); font-size: 0.7rem; }
 .stat-tile.accent { border-color: rgba(255, 193, 7, 0.3); }
 
+.economy-hint {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+
+.upgrade-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.upgrade-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.upgrade-card strong { font-size: 0.85rem; }
+.upgrade-card small { color: var(--hint); font-size: 0.7rem; }
+
+.planet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.planet-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.planet-card.owned {
+  border-color: rgba(76, 175, 80, 0.35);
+}
+
+.planet-emoji { font-size: 1.5rem; }
+.planet-info { flex: 1; min-width: 0; }
+.planet-info strong { display: block; font-size: 0.9rem; }
+.planet-info small { color: var(--hint); font-size: 0.7rem; }
+
+.planet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.egg-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+
 .panel-section {
   background: var(--surface);
   border: 1px solid var(--border);

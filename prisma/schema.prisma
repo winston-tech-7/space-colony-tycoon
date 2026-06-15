@@ -119,6 +119,8 @@ model Colony {
   energy        Int      @default(100)
   minerals      Int      @default(0)
   bioMatter     Int      @default(0) @map("bio_matter")
+  mineLevel     Int      @default(1) @map("mine_level")
+  bioLabLevel   Int      @default(1) @map("bio_lab_level")
   lastCollected DateTime @default(now()) @map("last_collected")
   createdAt     DateTime @default(now()) @map("created_at")
 
@@ -146,6 +148,7 @@ model Creature {
   feedCount         Int     @default(0) @map("feed_count")
   lastFedAt         DateTime? @map("last_fed_at")
   status            CreatureStatus @default(active)
+  powerLevel        Int     @default(1) @map("power_level")
   createdAt         DateTime @default(now()) @map("created_at")
 
   owner          User            @relation(fields: [ownerId], references: [telegramId], onDelete: Cascade)
@@ -371,6 +374,7 @@ model Egg {
   parentBId      Int?      @map("parent_b_id")
   status         EggStatus @default(incubating)
   rarityTier     Rarity?   @map("rarity_tier")
+  boostLevel     Int       @default(0) @map("boost_level")
   readyAt        DateTime  @map("ready_at")
   openedAt       DateTime? @map("opened_at")
   crackRequestId String?   @unique @map("crack_request_id")

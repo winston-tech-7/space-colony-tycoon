@@ -27,6 +27,7 @@ export interface Creature {
   hunger: number;
   evolutionProgress: number;
   feedCount?: number;
+  powerLevel?: number;
 }
 
 export interface Egg {
@@ -37,15 +38,19 @@ export interface Egg {
   openedAt: string | null;
   parentAId: number | null;
   parentBId: number | null;
+  boostLevel?: number;
 }
 
 export interface Colony {
   id: number;
+  planetId?: string;
   planetName: string;
   level: number;
   energy: number;
   minerals: number;
   bioMatter: number;
+  mineLevel?: number;
+  bioLabLevel?: number;
   isPremium: boolean;
 }
 
