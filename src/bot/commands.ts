@@ -1,4 +1,5 @@
 import type { Bot } from "grammy";
+import { InlineKeyboard } from "grammy";
 import { config } from "../config.js";
 import {
   ensureUser,
@@ -14,9 +15,20 @@ import { sendPremiumPlanetInvoice } from "../payments/stars.js";
 import { mainMenuKeyboard, modePickerKeyboard, openModeKeyboard } from "./keyboards.js";
 
 const WELCOME =
-  "🌌 *Space Colony Tycoon 2.0*\n\n" +
-  "5 режимов активны: Colony · Guild · Trading · Battle · AI Admiral\n\n" +
-  "Стань командиром галактической империи!";
+  "🪐 *Space Colony Tycoon*\n\n" +
+  "Космическая колония, где существа работают на вас.\n\n" +
+  "Кормите существ → скрещивайте → вскрывайте яйца → торгуйте на рынке → охотьтесь на легендарных созданий.\n\n" +
+  "Чем раньше начнёте — тем выше шанс попасть в топ колонизаторов.";
+
+export function startInlineKeyboard(): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (config.webappUrl) {
+    kb.webApp("🚀 Играть", config.webappUrl).row();
+  }
+  kb.url("📢 Подписаться на канал", "https://t.me/spacecolonyT_bot").row();
+  kb.url("📜 Условия", "https://space-colony-tycoon-production.up.railway.app/terms");
+  return kb;
+}
 
 const HELP =
   "📖 *Команды 2.0*\n\n" +
@@ -75,7 +87,7 @@ export function registerCommands(bot: Bot): void {
 
     await ctx.reply(WELCOME + extra, {
       parse_mode: "Markdown",
-      reply_markup: mainMenuKeyboard(),
+      reply_markup: startInlineKeyboard(),
     });
 
     const profile = await ensureUser(BigInt(from.id), from.first_name, from.username);

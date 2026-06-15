@@ -1,5 +1,7 @@
 import { Rarity, Stage } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
+import { claimIdempotencyKey } from "../../db/idempotency.js";
+import { bumpQuest } from "../loop/quests.js";
 import { publishEvent } from "../../realtime/events.js";
 
 export const SPECIES = [
@@ -100,6 +102,7 @@ export async function getProfile(telegramId: bigint) {
     include: {
       colonies: { include: { creatures: true }, orderBy: { id: "asc" } },
       creatures: { where: { listed: false }, orderBy: { id: "asc" } },
+      eggs: { where: { status: { not: "opened" } }, orderBy: { createdAt: "desc" } },
       guildMemberships: { include: { guild: true } },
     },
   });
@@ -127,12 +130,18 @@ export async function collectIdleResources(telegramId: bigint) {
 }
 
 export async function feedCreatures(telegramId: bigint) {
+  const allowed = await claimIdempotencyKey(telegramId, "feed", 60);
+  if (!allowed) {
+    throw new Error("Кормление доступно раз в минуту");
+  }
+
   const creatures = await prisma.creature.findMany({
-    where: { ownerId: telegramId, listed: false },
+    where: { ownerId: telegramId, listed: false, status: "active" },
   });
 
   let fed = 0;
   let evolved = 0;
+  const now = new Date();
 
   for (const creature of creatures) {
     const hunger = Math.max(0, creature.hunger - 25);
@@ -152,16 +161,33 @@ export async function feedCreatures(telegramId: bigint) {
 
     await prisma.creature.update({
       where: { id: creature.id },
-      data: { hunger, evolutionProgress: progress, stage },
+      data: {
+        hunger,
+        evolutionProgress: progress,
+        stage,
+        feedCount: { increment: 1 },
+        lastFedAt: now,
+      },
     });
     fed += 1;
   }
+
+  const medalBonus = Math.floor(fed / 10);
+
+  await prisma.user.update({
+    where: { telegramId },
+    data: {
+      totalFeeds: { increment: fed },
+      medals: medalBonus > 0 ? { increment: medalBonus } : undefined,
+    },
+  });
 
   await prisma.colony.updateMany({
     where: { userId: telegramId },
     data: { energy: { decrement: 5 } },
   });
 
+  await bumpQuest(telegramId, "daily_feed", 1);
   await publishEvent(Number(telegramId), "creatures_fed", { fed, evolved });
 
   return { fed, evolved, profile: await getProfile(telegramId) };

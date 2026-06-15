@@ -1,0 +1,38 @@
+{
+  "app": {
+    "id": "space-colony-tycoon",
+    "name": "Space Colony Tycoon",
+    "version": "2.1.0",
+    "locale": "ru",
+    "theme": "cosmic"
+  },
+  "theme": {
+    "colors": {
+      "bg": "#0a0e17",
+      "surface": "#1a2238",
+      "primary": "#5b8cff",
+      "accent": "#ffc107",
+      "ton": "#26c6da",
+      "secondary": "#9f7bff"
+    }
+  },
+  "navigation": {
+    "type": "bottom-tabs",
+    "tabs": [
+      { "id": "home", "title": "База", "emoji": "🪐" },
+      { "id": "collection", "title": "Архив", "emoji": "👽" },
+      { "id": "marketplace", "title": "Рынок", "emoji": "🏪" },
+      { "id": "leaderboard", "title": "Рейтинг", "emoji": "🏆" },
+      { "id": "events", "title": "События", "emoji": "✨" },
+      { "id": "settings", "title": "Профиль", "emoji": "⚙️" }
+    ]
+  },
+  "screens": [
+    { "id": "home", "layout": "hero-actions", "actions": ["feed", "breed", "wheel"] },
+    { "id": "collection", "layout": "creature-egg-grid" },
+    { "id": "marketplace", "layout": "market-list" },
+    { "id": "leaderboard", "layout": "rank-list" },
+    { "id": "events", "layout": "hunt-wheel-quests" },
+    { "id": "settings", "layout": "profile-referral" }
+  ]
+}

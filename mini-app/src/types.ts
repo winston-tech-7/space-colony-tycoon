@@ -26,6 +26,17 @@ export interface Creature {
   stage: string;
   hunger: number;
   evolutionProgress: number;
+  feedCount?: number;
+}
+
+export interface Egg {
+  id: number;
+  status: string;
+  rarityTier: string | null;
+  readyAt: string;
+  openedAt: string | null;
+  parentAId: number | null;
+  parentBId: number | null;
 }
 
 export interface Colony {
@@ -41,8 +52,13 @@ export interface Colony {
 export interface Profile {
   telegramId?: string;
   credits: number;
+  medals: number;
+  tokens: number;
+  totalFeeds?: number;
+  referralCode?: string | null;
   colonies: Colony[];
   creatures: Creature[];
+  eggs?: Egg[];
   guildMemberships: Array<{
     guildId: number;
     role: string;
@@ -80,4 +96,22 @@ export interface MarketListing {
   creature: Creature;
   seller: { firstName: string; username: string | null };
   species?: { emoji: string };
+}
+
+export interface Quest {
+  id: string;
+  title: string;
+  target: number;
+  rewardMedals: number;
+  progress: number;
+  completed: boolean;
+}
+
+export interface LeaderboardRow {
+  rank: number;
+  userId: string;
+  name: string;
+  score: number;
+  totalFeeds: number;
+  medals: number;
 }

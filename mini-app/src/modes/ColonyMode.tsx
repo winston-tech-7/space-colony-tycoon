@@ -8,43 +8,75 @@ const EMOJI: Record<string, string> = {
   cosmic: "✨",
 };
 
+const RARITY_CLASS: Record<string, string> = {
+  common: "rarity-common",
+  rare: "rarity-rare",
+  epic: "rarity-epic",
+  legendary: "rarity-legendary",
+};
+
 interface Props {
   profile: Profile;
-  status: string;
 }
 
-export function ColonyMode({ profile, status }: Props) {
+export function ColonyMode({ profile }: Props) {
   const colony = profile.colonies[0];
 
   return (
-    <div className="mode-panel">
-      <PlanetCanvas premium={colony?.isPremium} />
-      <h2>{colony?.planetName ?? "Колония"} · ур. {colony?.level ?? 1}</h2>
+    <div className="screen colony-screen">
+      <section className="hero-card">
+        <PlanetCanvas premium={colony?.isPremium} />
+        <div className="hero-meta">
+          <h2>{colony?.planetName ?? "Колония"}</h2>
+          <span className="level-badge">Ур. {colony?.level ?? 1}</span>
+          {colony?.isPremium && <span className="premium-badge">Premium</span>}
+        </div>
+      </section>
 
-      <div className="stats-grid">
-        <div className="stat"><span>⚡</span>{colony?.energy ?? 0}</div>
-        <div className="stat"><span>⛏</span>{colony?.minerals ?? 0}</div>
-        <div className="stat"><span>🧬</span>{colony?.bioMatter ?? 0}</div>
-        <div className="stat"><span>💰</span>{profile.credits}</div>
-      </div>
+      <section className="stats-row">
+        <div className="stat-tile">
+          <span>⛏</span>
+          <strong>{colony?.minerals ?? 0}</strong>
+          <small>Минералы</small>
+        </div>
+        <div className="stat-tile">
+          <span>🧬</span>
+          <strong>{colony?.bioMatter ?? 0}</strong>
+          <small>Биомасса</small>
+        </div>
+        <div className="stat-tile accent">
+          <span>👽</span>
+          <strong>{profile.creatures.length}</strong>
+          <small>Существа</small>
+        </div>
+      </section>
 
-      <h3>Существа</h3>
-      <div className="creature-list">
-        {profile.creatures.map((c) => (
-          <div key={c.id} className="creature-card">
-            <span className="creature-emoji">{EMOJI[c.speciesId] ?? "👽"}</span>
-            <div>
-              <strong>{c.name}</strong>
-              <small>{c.stage} · {c.rarity}</small>
-              <div className="progress">
-                <div className="progress-bar" style={{ width: `${c.evolutionProgress}%` }} />
+      <section className="panel-section">
+        <h3 className="section-title">Существа колонии</h3>
+        <div className="creature-list">
+          {profile.creatures.map((c) => (
+            <article key={c.id} className="creature-card">
+              <div className="creature-avatar">{EMOJI[c.speciesId] ?? "👽"}</div>
+              <div className="creature-body">
+                <div className="creature-head">
+                  <strong>{c.name}</strong>
+                  <span className={`rarity-tag ${RARITY_CLASS[c.rarity] ?? ""}`}>
+                    {c.rarity}
+                  </span>
+                </div>
+                <small className="creature-stage">{c.stage}</small>
+                <div className="progress">
+                  <div
+                    className="progress-bar"
+                    style={{ width: `${c.evolutionProgress}%` }}
+                  />
+                </div>
+                <small className="progress-label">Эволюция {c.evolutionProgress}%</small>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <p className="status">{status}</p>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

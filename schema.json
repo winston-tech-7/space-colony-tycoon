@@ -1,0 +1,117 @@
+{
+  "edges": [
+    {
+      "to": "n2",
+      "from": "n1",
+      "label": "Subscribe To The Channel"
+    },
+    {
+      "to": "n3",
+      "from": "n1",
+      "label": "Terms of Use"
+    },
+    {
+      "to": "n4",
+      "from": "n1",
+      "label": "🦆 Play Now"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "menu",
+      "actor": "bot",
+      "depth": 0,
+      "label": "/start",
+      "buttons": [
+        "🦆 Play Now",
+        "Subscribe To The Channel",
+        "Terms of Use"
+      ],
+      "groupId": "onboarding",
+      "inputType": null,
+      "description": "🦆 Welcome to DUCK × MY × DUCK! 🦆\n\nHey there! This is a world where Ducks do the work for you.\n\nFeed your Ducks to earn points. Breed them with friends to get new ones. Crack Eggs to find rare rewards. And hunt down the Legendary Ducks before they're all gone!\n\nThe most active players will receive special prizes when the big in-game event kicks off. The earlier you start — the better your chances of reaching the top.\n\nInvite your friends — more fun, more rewards! 🎉",
+      "translations": {}
+    },
+    {
+      "id": "n4",
+      "type": "bot_message",
+      "actor": "bot",
+      "depth": 1,
+      "label": "🦆 Play Now",
+      "buttons": [],
+      "groupId": "gameplay",
+      "inputType": null,
+      "description": "[Web App: 🦆 Play Now] — Opens the Mini App game interface at https://selector.duckmyduck.com/",
+      "translations": {}
+    },
+    {
+      "id": "n2",
+      "type": "bot_message",
+      "actor": "bot",
+      "depth": 1,
+      "label": "Subscribe To The Channel",
+      "buttons": [],
+      "groupId": "community",
+      "inputType": null,
+      "description": "[URL: https://t.me/duckmyduck_official] — Redirects the user to the official DUCK × MY × DUCK community Telegram channel.",
+      "translations": {}
+    },
+    {
+      "id": "n3",
+      "type": "bot_message",
+      "actor": "bot",
+      "depth": 1,
+      "label": "Terms of Use",
+      "buttons": [],
+      "groupId": "legal",
+      "inputType": null,
+      "description": "[URL: https://duckmyduck.com/terms-of-use] — Opens the game's Terms of Use page in the browser.",
+      "translations": {}
+    }
+  ],
+  "groups": [
+    {
+      "id": "onboarding",
+      "label": "Welcome & Start",
+      "nodes": [
+        "n1"
+      ]
+    },
+    {
+      "id": "gameplay",
+      "label": "Mini App Game",
+      "nodes": [
+        "n4"
+      ]
+    },
+    {
+      "id": "community",
+      "label": "Community Channel",
+      "nodes": [
+        "n2"
+      ]
+    },
+    {
+      "id": "legal",
+      "label": "Legal & Terms",
+      "nodes": [
+        "n3"
+      ]
+    }
+  ],
+  "localizations": {
+    "primary": null,
+    "available": []
+  },
+  "lifecycleMapping": {
+    "started": {
+      "nodeId": "n1",
+      "description": "User sends /start to the bot and receives the welcome message with game explanation and CTAs."
+    },
+    "qualified": {
+      "nodeId": "n4",
+      "description": "User taps '🦆 Play Now' and enters the Mini App, beginning active gameplay."
+    }
+  }
+}

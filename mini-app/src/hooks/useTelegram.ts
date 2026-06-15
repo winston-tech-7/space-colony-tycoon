@@ -6,6 +6,8 @@ interface TgWebApp {
   initData: string;
   initDataUnsafe: { start_param?: string };
   themeParams: Record<string, string>;
+  setHeaderColor?: (color: string) => void;
+  setBackgroundColor?: (color: string) => void;
   MainButton: {
     text: string;
     show: () => void;
@@ -34,6 +36,8 @@ export function useTelegram() {
     if (!tg) return;
     tg.ready();
     tg.expand();
+    tg.setHeaderColor?.("#0a0e17");
+    tg.setBackgroundColor?.("#0a0e17");
     Object.entries(tg.themeParams).forEach(([k, v]) => {
       document.documentElement.style.setProperty(
         `--tg-theme-${k.replace(/_/g, "-")}`,

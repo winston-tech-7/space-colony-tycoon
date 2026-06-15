@@ -35,6 +35,17 @@ import {
   getAdmiralAdvice,
   getAdmiralHistory,
 } from "../modes/admiral/service.js";
+import { getQuests } from "../modes/loop/quests.js";
+import {
+  breedCreatures,
+  crackEgg,
+  getHuntState,
+  getLeaderboard,
+  huntOnce,
+  listBreedCandidates,
+  listEggs,
+  spinWheel,
+} from "../modes/loop/service.js";
 import { telegramAuth, type AuthedRequest } from "./middleware/auth.js";
 
 export const apiRouter = Router();
@@ -68,8 +79,12 @@ apiRouter.get("/me", telegramAuth, async (req: AuthedRequest, res) => {
 });
 
 apiRouter.post("/colony/feed", telegramAuth, async (req: AuthedRequest, res) => {
-  const result = await feedCreatures(BigInt(req.telegramAuth!.user.id));
-  res.json(result);
+  try {
+    const result = await feedCreatures(BigInt(req.telegramAuth!.user.id));
+    res.json(result);
+  } catch (e) {
+    res.status(429).json({ error: e instanceof Error ? e.message : "Error" });
+  }
 });
 
 apiRouter.get("/colony", telegramAuth, async (req: AuthedRequest, res) => {
@@ -269,4 +284,91 @@ apiRouter.post("/admiral", telegramAuth, async (req: AuthedRequest, res) => {
 apiRouter.get("/admiral/history", telegramAuth, async (req: AuthedRequest, res) => {
   const history = await getAdmiralHistory(BigInt(req.telegramAuth!.user.id));
   res.json({ history });
+});
+
+apiRouter.get("/eggs", telegramAuth, async (req: AuthedRequest, res) => {
+  const eggs = await listEggs(BigInt(req.telegramAuth!.user.id));
+  res.json({ eggs });
+});
+
+apiRouter.post("/eggs/crack", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { eggId, crackRequestId } = req.body as {
+      eggId?: number;
+      crackRequestId?: string;
+    };
+    if (!eggId || !crackRequestId) {
+      return res.status(400).json({ error: "eggId and crackRequestId required" });
+    }
+    const result = await crackEgg(
+      BigInt(req.telegramAuth!.user.id),
+      eggId,
+      crackRequestId,
+    );
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.get("/breed/candidates", telegramAuth, async (req: AuthedRequest, res) => {
+  const candidates = await listBreedCandidates(BigInt(req.telegramAuth!.user.id));
+  res.json({ candidates });
+});
+
+apiRouter.post("/breed", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { sessionId, parentAId, parentBId } = req.body as {
+      sessionId?: string;
+      parentAId?: number;
+      parentBId?: number;
+    };
+    if (!sessionId || !parentAId || !parentBId) {
+      return res.status(400).json({ error: "sessionId, parentAId, parentBId required" });
+    }
+    const result = await breedCreatures(
+      BigInt(req.telegramAuth!.user.id),
+      sessionId,
+      parentAId,
+      parentBId,
+    );
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.post("/wheel/spin", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { spinId } = req.body as { spinId?: string };
+    if (!spinId) return res.status(400).json({ error: "spinId required" });
+    const result = await spinWheel(BigInt(req.telegramAuth!.user.id), spinId);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.get("/hunt", telegramAuth, async (req: AuthedRequest, res) => {
+  const state = await getHuntState(BigInt(req.telegramAuth!.user.id));
+  res.json(state);
+});
+
+apiRouter.post("/hunt", telegramAuth, async (req: AuthedRequest, res) => {
+  try {
+    const result = await huntOnce(BigInt(req.telegramAuth!.user.id));
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+apiRouter.get("/quests", telegramAuth, async (req: AuthedRequest, res) => {
+  const quests = await getQuests(BigInt(req.telegramAuth!.user.id));
+  res.json({ quests });
+});
+
+apiRouter.get("/leaderboard", async (_req, res) => {
+  const leaderboard = await getLeaderboard();
+  res.json({ leaderboard });
 });

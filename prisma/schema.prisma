@@ -51,6 +51,25 @@ enum ExpeditionStatus {
   completed
 }
 
+enum CreatureStatus {
+  active
+  staked
+  breeding
+}
+
+enum EggStatus {
+  incubating
+  ready
+  opened
+}
+
+enum HuntEventStatus {
+  open
+  in_progress
+  closed
+  claimed
+}
+
 model User {
   telegramId       BigInt      @id @map("telegram_id")
   username         String?
@@ -60,10 +79,19 @@ model User {
   referralCode     String?     @unique @map("referral_code")
   referredBy       BigInt?     @map("referred_by")
   credits          Int         @default(50)
+  medals           Int         @default(100)
+  tokens           Int         @default(0)
+  totalFeeds       Int         @default(0) @map("total_feeds")
   createdAt        DateTime    @default(now()) @map("created_at")
   lastSeenAt       DateTime    @default(now()) @map("last_seen_at")
 
   colonies              Colony[]
+  eggs                  Egg[]
+  breedingSessions      BreedingSession[] @relation("BreedingInitiator")
+  partnerBreedings      BreedingSession[] @relation("BreedingPartner")
+  spinHistory           SpinHistory[]
+  huntParticipations    HuntParticipation[]
+  questProgress         QuestProgress[]
   creatures             Creature[]
   guildMemberships      GuildMember[]
   ledGuilds             Guild[]              @relation("GuildLeader")
@@ -115,9 +143,16 @@ model Creature {
   traitsJson        Json    @default("{}") @map("traits_json")
   nftTokenId        String? @map("nft_token_id")
   listed            Boolean @default(false)
+  feedCount         Int     @default(0) @map("feed_count")
+  lastFedAt         DateTime? @map("last_fed_at")
+  status            CreatureStatus @default(active)
   createdAt         DateTime @default(now()) @map("created_at")
 
   owner          User            @relation(fields: [ownerId], references: [telegramId], onDelete: Cascade)
+  eggsAsParentA  Egg[]           @relation("EggParentA")
+  eggsAsParentB  Egg[]           @relation("EggParentB")
+  breedingsAsA   BreedingSession[] @relation("BreedParentA")
+  breedingsAsB   BreedingSession[] @relation("BreedParentB")
   colony         Colony          @relation(fields: [colonyId], references: [id], onDelete: Cascade)
   marketListings MarketListing[]
   nftMetadata    NftMetadata?
@@ -327,4 +362,108 @@ model SeasonalProgress {
 
   @@id([userId, seasonId, mode])
   @@map("seasonal_progress")
+}
+
+model Egg {
+  id             Int       @id @default(autoincrement())
+  ownerId        BigInt    @map("owner_id")
+  parentAId      Int?      @map("parent_a_id")
+  parentBId      Int?      @map("parent_b_id")
+  status         EggStatus @default(incubating)
+  rarityTier     Rarity?   @map("rarity_tier")
+  readyAt        DateTime  @map("ready_at")
+  openedAt       DateTime? @map("opened_at")
+  crackRequestId String?   @unique @map("crack_request_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  owner   User      @relation(fields: [ownerId], references: [telegramId], onDelete: Cascade)
+  parentA Creature? @relation("EggParentA", fields: [parentAId], references: [id])
+  parentB Creature? @relation("EggParentB", fields: [parentBId], references: [id])
+  session BreedingSession?
+
+  @@index([ownerId, status])
+  @@map("eggs")
+}
+
+model BreedingSession {
+  id          String   @id
+  initiatorId BigInt   @map("initiator_id")
+  partnerId   BigInt   @map("partner_id")
+  parentAId   Int      @map("parent_a_id")
+  parentBId   Int      @map("parent_b_id")
+  eggId       Int?     @unique @map("egg_id")
+  status      String   @default("completed")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  initiator User     @relation("BreedingInitiator", fields: [initiatorId], references: [telegramId])
+  partner   User     @relation("BreedingPartner", fields: [partnerId], references: [telegramId])
+  parentA   Creature @relation("BreedParentA", fields: [parentAId], references: [id])
+  parentB   Creature @relation("BreedParentB", fields: [parentBId], references: [id])
+  egg       Egg?     @relation(fields: [eggId], references: [id])
+
+  @@map("breeding_sessions")
+}
+
+model SpinHistory {
+  spinId    String   @id @map("spin_id")
+  userId    BigInt   @map("user_id")
+  medalCost Int      @map("medal_cost")
+  prizeId   String   @map("prize_id")
+  prizeJson Json     @map("prize_json")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("spin_history")
+}
+
+model HuntEvent {
+  id           Int             @id @default(autoincrement())
+  name         String
+  creatureName String          @map("creature_name")
+  status       HuntEventStatus @default(open)
+  startsAt     DateTime        @map("starts_at")
+  endsAt       DateTime        @map("ends_at")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  participations HuntParticipation[]
+
+  @@map("hunt_events")
+}
+
+model HuntParticipation {
+  eventId    Int      @map("event_id")
+  userId     BigInt   @map("user_id")
+  huntCount  Int      @default(0) @map("hunt_count")
+  lastHuntAt DateTime? @map("last_hunt_at")
+
+  event HuntEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@map("hunt_participations")
+}
+
+model QuestProgress {
+  userId      BigInt    @map("user_id")
+  questId     String    @map("quest_id")
+  day         DateTime  @db.Date
+  progress    Int       @default(0)
+  completedAt DateTime? @map("completed_at")
+
+  user User @relation(fields: [userId], references: [telegramId], onDelete: Cascade)
+
+  @@id([userId, questId, day])
+  @@map("quest_progress")
+}
+
+model IdempotencyKey {
+  key       String   @id
+  userId    BigInt   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }

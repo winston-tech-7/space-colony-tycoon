@@ -1,37 +1,34 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api/client";
-import { ModeNav } from "./components/ModeNav";
+import { AppShell } from "./components/AppShell";
+import { SplashScreen } from "./components/SplashScreen";
+import type { TabId } from "./lib/schema";
+import { TradingMode } from "./modes/TradingMode";
+import { CollectionScreen } from "./screens/CollectionScreen";
+import { EventsScreen } from "./screens/EventsScreen";
+import { HomeScreen } from "./screens/HomeScreen";
+import { LeaderboardScreen } from "./screens/LeaderboardScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import { useSocket } from "./hooks/useSocket";
 import { useTelegram } from "./hooks/useTelegram";
-import { AdmiralMode } from "./modes/AdmiralMode";
-import { BattleMode } from "./modes/BattleMode";
-import { ColonyMode } from "./modes/ColonyMode";
-import { GuildMode } from "./modes/GuildMode";
-import { ModeStub } from "./modes/ModeStub";
-import { TradingMode } from "./modes/TradingMode";
-import type { GameMode, GameModeId, Profile } from "./types";
+import type { Profile } from "./types";
 
-function parseMode(startParam?: string): GameModeId {
-  if (!startParam) return "colony";
-  if (startParam.startsWith("join_")) return "guild";
-  if (startParam.startsWith("nft_") || startParam === "market") return "trading";
-  if (startParam.startsWith("challenge_")) return "battle";
-  if (startParam.startsWith("expedition_")) return "expedition";
-  const known = ["colony", "guild", "trading", "market", "battle", "expedition", "genetic", "admiral", "storyline"];
-  if (known.includes(startParam)) {
-    return startParam === "market" ? "trading" : (startParam as GameModeId);
-  }
-  return "colony";
+function parseTab(startParam?: string): TabId {
+  if (startParam === "market" || startParam === "trading") return "marketplace";
+  if (startParam === "collection") return "collection";
+  if (startParam === "events" || startParam === "wheel" || startParam === "hunt") return "events";
+  if (startParam === "leaderboard") return "leaderboard";
+  if (startParam === "settings") return "settings";
+  return "home";
 }
 
 export function App() {
   const { tg, initData, startParam } = useTelegram();
-  const { socket, connected } = useSocket(initData);
-  const [modes, setModes] = useState<GameMode[]>([]);
-  const [activeMode, setActiveMode] = useState<GameModeId>(() => parseMode(startParam));
+  const { connected } = useSocket(initData);
+  const [activeTab, setActiveTab] = useState<TabId>(() => parseTab(startParam));
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userId, setUserId] = useState("");
-  const [status, setStatus] = useState("Загрузка...");
+  const [status, setStatus] = useState("");
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
@@ -41,13 +38,11 @@ export function App() {
     }
     const data = await api<{
       profile: Profile;
-      modes: GameMode[];
       user: { id: number };
     }>("/api/me", initData);
     setProfile(data.profile);
-    setModes(data.modes);
     setUserId(String(data.user.id));
-    setStatus("Колония загружена");
+    setStatus("");
     setError("");
   }, [initData]);
 
@@ -59,8 +54,8 @@ export function App() {
     if (!tg) return;
 
     const handler = async () => {
-      if (activeMode !== "colony") {
-        setActiveMode("colony");
+      if (activeTab !== "home") {
+        setActiveTab("home");
         return;
       }
       tg.MainButton.showProgress();
@@ -74,7 +69,7 @@ export function App() {
         setProfile(result.profile);
         setStatus(
           result.evolved > 0
-            ? `Покормлено ${result.fed}, эволюция: ${result.evolved}`
+            ? `Покормлено ${result.fed} · эволюция ${result.evolved}`
             : `Покормлено: ${result.fed}`,
         );
         tg.HapticFeedback?.impactOccurred("medium");
@@ -86,7 +81,7 @@ export function App() {
       }
     };
 
-    if (activeMode === "colony") {
+    if (activeTab === "home") {
       tg.MainButton.text = "Покормить существ";
       tg.MainButton.show();
       tg.MainButton.onClick(handler);
@@ -95,56 +90,58 @@ export function App() {
     }
 
     return () => tg.MainButton.offClick(handler);
-  }, [tg, initData, activeMode]);
-
-  const mode = modes.find((m) => m.id === activeMode);
-  const isImplemented =
-    mode?.implemented ??
-    ["colony", "guild", "trading", "battle", "admiral"].includes(activeMode);
-
-  const challengeTarget = startParam?.startsWith("challenge_")
-    ? startParam.replace("challenge_", "")
-    : undefined;
+  }, [tg, initData, activeTab]);
 
   if (error && !profile) {
-    return <div className="app error-screen"><p>{error}</p></div>;
+    return (
+      <div className="app error-screen">
+        <div className="error-card">
+          <span className="error-icon">⚠️</span>
+          <h2>Не удалось войти</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
   }
 
   if (!profile) {
-    return <div className="app"><p className="status">Инициализация...</p></div>;
+    return <SplashScreen message={initData ? "Синхронизация..." : "Ожидание Telegram..."} />;
   }
 
+  const colony = profile.colonies[0];
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Space Colony 2.0</h1>
-        <small>{connected ? "🟢 Live" : "⚪ Offline"}</small>
-      </header>
-
-      <ModeNav modes={modes} active={activeMode} onChange={setActiveMode} />
-
-      {isImplemented && activeMode === "colony" && (
-        <ColonyMode profile={profile} status={status} />
-      )}
-      {isImplemented && activeMode === "guild" && (
-        <GuildMode initData={initData} profile={profile} onRefresh={refresh} />
-      )}
-      {isImplemented && activeMode === "trading" && (
-        <TradingMode initData={initData} profile={profile} onRefresh={refresh} />
-      )}
-      {isImplemented && activeMode === "battle" && (
-        <BattleMode
-          initData={initData}
+    <AppShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      credits={profile.credits}
+      medals={profile.medals}
+      tokens={profile.tokens}
+      energy={colony?.energy}
+      connected={connected}
+      status={status}
+    >
+      {activeTab === "home" && (
+        <HomeScreen
           profile={profile}
-          userId={userId}
-          challengeTarget={challengeTarget}
-          socket={socket}
+          initData={initData}
+          onRefresh={refresh}
+          onNavigate={setActiveTab}
         />
       )}
-      {isImplemented && activeMode === "admiral" && (
-        <AdmiralMode initData={initData} />
+      {activeTab === "collection" && (
+        <CollectionScreen profile={profile} initData={initData} onRefresh={refresh} />
       )}
-      {!isImplemented && <ModeStub mode={activeMode} initData={initData} />}
-    </div>
+      {activeTab === "marketplace" && (
+        <TradingMode initData={initData} profile={profile} onRefresh={refresh} />
+      )}
+      {activeTab === "leaderboard" && <LeaderboardScreen initData={initData} />}
+      {activeTab === "events" && (
+        <EventsScreen profile={profile} initData={initData} onRefresh={refresh} />
+      )}
+      {activeTab === "settings" && (
+        <SettingsScreen profile={profile} userId={userId} />
+      )}
+    </AppShell>
   );
 }
