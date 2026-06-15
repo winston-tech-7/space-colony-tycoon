@@ -2,14 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { PlanetCanvas } from "../components/PlanetCanvas";
 import { PlanetsPanel } from "../components/PlanetsPanel";
+import { GameArt, creatureArtKind } from "../components/GameArt";
+import { stageLabel, rarityLabel, newRequestId } from "../lib/labels";
 import type { Profile } from "../types";
-
-const EMOJI: Record<string, string> = {
-  zephyr: "🟢",
-  lunar: "🌙",
-  nebula: "💜",
-  cosmic: "✨",
-};
 
 const BREEDABLE_STAGES = ["juvenile", "adult", "evolved"];
 
@@ -21,11 +16,15 @@ type BreedCandidate = {
   owner: { telegramId: string; firstName: string; username?: string | null };
 };
 
+const EMOJI: Record<string, string> = {
+  zephyr: "🟢",
+  lunar: "🌙",
+  nebula: "💜",
+  cosmic: "✨",
+};
+
 function newSessionId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `breed-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return newRequestId("breed");
 }
 
 interface Props {
@@ -140,11 +139,9 @@ export function HomeScreen({ profile, initData, userId, onRefresh, onNavigate }:
         </div>
         {mainCreature && (
           <div className="main-creature">
-            <span className="creature-avatar lg">
-              {EMOJI[mainCreature.speciesId] ?? "👽"}
-            </span>
+            <GameArt kind={creatureArtKind(mainCreature.speciesId)} size={56} />
             <strong>{mainCreature.name}</strong>
-            <small>{mainCreature.stage} · {mainCreature.rarity}</small>
+            <small>{stageLabel(mainCreature.stage)} · {rarityLabel(mainCreature.rarity)}</small>
           </div>
         )}
       </section>
@@ -156,7 +153,7 @@ export function HomeScreen({ profile, initData, userId, onRefresh, onNavigate }:
           <small>{readyEggs} готово</small>
         </button>
         <button type="button" className="action-tile" onClick={openBreed}>
-          <span>🧬</span>
+          <GameArt kind="breed" size={40} />
           <strong>Скрещивание</strong>
           <small>50 💰 · 2 существа</small>
         </button>
@@ -204,7 +201,7 @@ export function HomeScreen({ profile, initData, userId, onRefresh, onNavigate }:
               )}
               {breedableOwn.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.stage})
+                  {c.name} ({stageLabel(c.stage)})
                 </option>
               ))}
             </select>

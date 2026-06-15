@@ -1,4 +1,4 @@
-import { Rarity, Stage } from "@prisma/client";
+import { Rarity, Stage, WarStatus } from "@prisma/client";
 import { prisma } from "../../db/prisma.js";
 import { claimIdempotencyKey } from "../../db/idempotency.js";
 import { bumpQuest } from "../loop/quests.js";
@@ -98,7 +98,22 @@ export async function getProfile(telegramId: bigint) {
       colonies: { include: { creatures: true }, orderBy: { id: "asc" } },
       creatures: { where: { listed: false }, orderBy: { id: "asc" } },
       eggs: { where: { status: { not: "opened" } }, orderBy: { createdAt: "desc" } },
-      guildMemberships: { include: { guild: true } },
+      guildMemberships: {
+        include: {
+          guild: {
+            include: {
+              warsAs1: {
+                where: { status: { in: [WarStatus.pending, WarStatus.active] } },
+                take: 1,
+              },
+              warsAs2: {
+                where: { status: { in: [WarStatus.pending, WarStatus.active] } },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
     },
   });
 }

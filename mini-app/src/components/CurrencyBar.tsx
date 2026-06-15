@@ -32,7 +32,7 @@ export function CurrencyBar({ credits, medals, tokens, energy, connected }: Prop
         </div>
       )}
       <div className={`live-badge ${connected ? "on" : ""}`}>
-        {connected ? "Live" : "Offline"}
+        {connected ? "Онлайн" : "Офлайн"}
       </div>
     </div>
   );

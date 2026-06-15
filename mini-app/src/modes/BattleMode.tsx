@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
+import { GameArt } from "../components/GameArt";
+import { rarityLabel } from "../lib/labels";
 import type { BattleState, Profile } from "../types";
 
 interface Props {
@@ -44,16 +46,16 @@ export function BattleMode({
   }, [initData, activeBattle]);
 
   useEffect(() => {
-    load().catch(console.error);
+    load().catch(() => {});
   }, [load]);
 
   useEffect(() => {
     if (!socket) return;
     const onUpdate = (battle: BattleState) => {
       setActiveBattle((prev) => (prev?.id === battle.id ? battle : prev));
-      load().catch(console.error);
+      load().catch(() => {});
     };
-    const onChallenge = () => load().catch(console.error);
+    const onChallenge = () => load().catch(() => {});
     socket.on("battle:update", onUpdate);
     socket.on("battle:challenge", onChallenge);
     return () => {
@@ -65,6 +67,10 @@ export function BattleMode({
   useEffect(() => {
     if (activeBattle) socket?.emit("join:battle", activeBattle.id);
   }, [activeBattle, socket]);
+
+  useEffect(() => {
+    if (challengeTarget) setDefenderId(challengeTarget);
+  }, [challengeTarget]);
 
   async function challenge() {
     if (!creatureId || !defenderId) return;
@@ -128,15 +134,20 @@ export function BattleMode({
 
   return (
     <div className="mode-panel">
-      <h2>🥊 Battle Arena</h2>
-      <p>Turn-based PvP · победа +25💰</p>
+      <div className="panel-head-art">
+        <GameArt kind="battle" size={52} />
+        <div>
+          <h2>Арена битв</h2>
+          <p className="muted">Пошаговые PvP · победа +25 💰</p>
+        </div>
+      </div>
 
       {!activeBattle && (
         <>
           <div className="form-block">
             <h3>Вызвать игрока</h3>
             <input
-              placeholder="Telegram ID противника"
+              placeholder="ID игрока в Telegram"
               value={defenderId}
               onChange={(e) => setDefenderId(e.target.value)}
             />
@@ -147,7 +158,7 @@ export function BattleMode({
               <option value="">Ваш боец</option>
               {profile.creatures.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.rarity})
+                  {c.name} ({rarityLabel(c.rarity)})
                 </option>
               ))}
             </select>
@@ -186,13 +197,16 @@ export function BattleMode({
         <div className="battle-arena">
           <div className="battle-header">
             <span>{activeBattle.player1.name}</span>
-            <span>vs</span>
+            <span>против</span>
             <span>{activeBattle.player2.name}</span>
           </div>
 
           <div className="battle-hp">
             <div>
-              <small>{activeBattle.creature1?.name}</small>
+              <div className="battle-fighter">
+                <GameArt kind="creature-zephyr" size={36} />
+                <small>{activeBattle.creature1?.name}</small>
+              </div>
               <div className="hp-bar">
                 <div
                   className="hp-fill p1"
@@ -204,7 +218,10 @@ export function BattleMode({
               <span>{activeBattle.p1Hp} HP</span>
             </div>
             <div>
-              <small>{activeBattle.creature2?.name ?? "ожидание..."}</small>
+              <div className="battle-fighter">
+                <GameArt kind="creature-lunar" size={36} />
+                <small>{activeBattle.creature2?.name ?? "ожидание..."}</small>
+              </div>
               <div className="hp-bar">
                 <div
                   className="hp-fill p2"
@@ -247,7 +264,7 @@ export function BattleMode({
                 ⚔️ Атака
               </button>
               <button type="button" className="secondary-btn" onClick={() => turn("defend")} disabled={loading}>
-                🛡 Защита + контратака
+                🛡 Защита
               </button>
             </div>
           )}
@@ -275,7 +292,7 @@ export function BattleMode({
 
       {data && data.leaderboard.length > 0 && (
         <>
-          <h3>🏆 Рейтинг</h3>
+          <h3>🏆 Рейтинг арены</h3>
           <ul className="guild-list">
             {data.leaderboard.map((e) => (
               <li key={e.userId}>

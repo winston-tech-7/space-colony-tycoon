@@ -73,8 +73,8 @@ export interface Profile {
       tag: string;
       memberCount: number;
       powerRating: number;
-      warsAs1: Array<{ guild1Score: number; guild2Score: number; status: string }>;
-      warsAs2: Array<{ guild1Score: number; guild2Score: number; status: string }>;
+      warsAs1?: Array<{ guild1Score: number; guild2Score: number; status: string }>;
+      warsAs2?: Array<{ guild1Score: number; guild2Score: number; status: string }>;
     };
   }>;
 }

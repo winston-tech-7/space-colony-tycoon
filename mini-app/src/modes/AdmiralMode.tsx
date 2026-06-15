@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { GameArt } from "../components/GameArt";
 
 interface AdviceResult {
   advice: string;
@@ -45,34 +46,35 @@ export function AdmiralMode({ initData }: Props) {
   }
 
   useEffect(() => {
-    requestAdvice().catch(console.error);
+    requestAdvice().catch(() => {});
   }, []);
 
   const sourceLabel =
     result?.source === "gpt"
-      ? "GPT-4o"
+      ? "Нейросеть"
       : result?.source === "rules"
         ? "Тактический ИИ"
-        : "Лимит";
+        : "Лимит исчерпан";
 
   return (
     <div className="mode-panel admiral">
-      <h2>🤖 AI Admiral</h2>
-      <p>Персональный стратегический советник</p>
-
-      <div className="admiral-avatar" aria-hidden="true">
-        <span>🛸</span>
+      <div className="panel-head-art">
+        <GameArt kind="admiral" size={64} />
+        <div>
+          <h2>Адмирал ИИ</h2>
+          <p className="muted">Персональные советы по развитию колонии</p>
+        </div>
       </div>
 
       {result && (
         <div className="advice-box">
           <div className="advice-meta">
             <span className="source-badge">{sourceLabel}</span>
-            {result.cached && <span className="cached-badge">кэш 30м</span>}
+            {result.cached && <span className="cached-badge">из кэша</span>}
             {!result.unlimited && result.remaining !== null && (
               <span className="limit-badge">осталось {result.remaining}/3</span>
             )}
-            {result.unlimited && <span className="limit-badge">∞ Admiral</span>}
+            {result.unlimited && <span className="limit-badge">без лимита</span>}
           </div>
           <div className="advice-text">
             {result.advice.split("\n\n").map((p, i) => (
@@ -88,18 +90,12 @@ export function AdmiralMode({ initData }: Props) {
         onClick={requestAdvice}
         disabled={loading || result?.source === "limit"}
       >
-        {loading ? "Анализ..." : "Обновить совет"}
+        {loading ? "Анализ колонии..." : "Новый совет"}
       </button>
-
-      {result?.source === "rules" && (
-        <p className="muted">
-          Rule-based режим. Задайте OPENAI_API_KEY в .env для GPT-4o.
-        </p>
-      )}
 
       {history.length > 1 && (
         <>
-          <h3>История</h3>
+          <h3>Недавние советы</h3>
           <ul className="admiral-history">
             {history.slice(1, 4).map((h) => (
               <li key={h.id}>

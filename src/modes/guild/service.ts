@@ -182,14 +182,36 @@ export async function resolveExpiredWars() {
   for (const war of wars) {
     const winnerId =
       war.guild1Score >= war.guild2Score ? war.guild1Id : war.guild2Id;
+    const rewards = { credits: 100, minerals: 50 };
+
     await prisma.guildWar.update({
       where: { id: war.id },
       data: {
         status: WarStatus.completed,
         winnerId,
-        rewardsJson: { credits: 100, minerals: 50 },
+        rewardsJson: rewards,
       },
     });
+
+    const members = await prisma.guildMember.findMany({
+      where: { guildId: winnerId },
+    });
+    for (const member of members) {
+      await prisma.user.update({
+        where: { telegramId: member.userId },
+        data: { credits: { increment: rewards.credits } },
+      });
+      const colony = await prisma.colony.findFirst({
+        where: { userId: member.userId },
+        orderBy: { id: "asc" },
+      });
+      if (colony) {
+        await prisma.colony.update({
+          where: { id: colony.id },
+          data: { minerals: colony.minerals + rewards.minerals },
+        });
+      }
+    }
   }
 
   return wars.length;

@@ -1,20 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
+import { GameArt, creatureArtKind } from "../components/GameArt";
+import { rarityLabel, stageLabel, newRequestId } from "../lib/labels";
 import type { Egg, Profile } from "../types";
-
-const EMOJI: Record<string, string> = {
-  zephyr: "🟢",
-  lunar: "🌙",
-  nebula: "💜",
-  cosmic: "✨",
-};
-
-function newRequestId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `crack-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 function isEggReady(egg: Egg): boolean {
   return egg.status === "ready" || new Date(egg.readyAt).getTime() <= Date.now();
@@ -102,7 +90,7 @@ export function CollectionScreen({ profile, initData, onRefresh, onHaptic }: Pro
         method: "POST",
         body: JSON.stringify({
           eggId: egg.id,
-          crackRequestId: newRequestId(),
+          crackRequestId: newRequestId("crack"),
         }),
       });
       setReveal(`Получено: ${result.creature.name} · ${result.creature.rarity}`);
@@ -183,11 +171,11 @@ export function CollectionScreen({ profile, initData, onRefresh, onHaptic }: Pro
             <p className="muted">Вскройте яйцо, чтобы получить первое существо.</p>
           )}
           {profile.creatures.map((c) => (
-            <article key={c.id} className="creature-card compact">
-              <span className="creature-avatar">{EMOJI[c.speciesId] ?? "👽"}</span>
+              <article key={c.id} className="creature-card compact">
+              <GameArt kind={creatureArtKind(c.speciesId)} size={44} />
               <strong>{c.name}</strong>
               <small>
-                {c.rarity} · сила {(c.powerLevel ?? 1)}
+                {rarityLabel(c.rarity)} · {stageLabel(c.stage)} · сила {(c.powerLevel ?? 1)}
               </small>
               <div className="progress">
                 <div className="progress-bar" style={{ width: `${c.evolutionProgress}%` }} />

@@ -36,6 +36,7 @@ export function PlanetsPanel({ initData, colonyId, onRefresh }: Props) {
   const [economy, setEconomy] = useState<EconomyState | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState("");
+  const [selectedColonyId, setSelectedColonyId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const data = await api<EconomyState>("/api/planets", initData);
@@ -70,7 +71,10 @@ export function PlanetsPanel({ initData, colonyId, onRefresh }: Props) {
   }
 
   const activeColonyId =
-    colonyId ?? economy?.catalog.find((p) => p.owned)?.colonyId ?? null;
+    selectedColonyId ??
+    colonyId ??
+    economy?.catalog.find((p) => p.owned)?.colonyId ??
+    null;
   const activePlanet = economy?.catalog.find((p) => p.colonyId === activeColonyId);
 
   return (
@@ -131,7 +135,16 @@ export function PlanetsPanel({ initData, colonyId, onRefresh }: Props) {
 
       <div className="planet-list">
         {economy?.catalog.map((p) => (
-          <article key={p.id} className={`planet-card ${p.owned ? "owned" : ""}`}>
+          <article
+            key={p.id}
+            className={`planet-card ${p.owned ? "owned" : ""} ${p.colonyId === activeColonyId ? "selected" : ""}`}
+            onClick={() => p.colonyId && setSelectedColonyId(p.colonyId)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && p.colonyId) setSelectedColonyId(p.colonyId);
+            }}
+            role={p.owned ? "button" : undefined}
+            tabIndex={p.owned ? 0 : undefined}
+          >
             <span className="planet-emoji">{p.emoji}</span>
             <div className="planet-info">
               <strong>{p.name}</strong>

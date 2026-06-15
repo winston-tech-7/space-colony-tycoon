@@ -23,7 +23,7 @@
       { "id": "collection", "title": "Архив", "emoji": "👽" },
       { "id": "marketplace", "title": "Рынок", "emoji": "🏪" },
       { "id": "leaderboard", "title": "Рейтинг", "emoji": "🏆" },
-      { "id": "events", "title": "События", "emoji": "✨" },
+      { "id": "events", "title": "Арена", "emoji": "✨" },
       { "id": "settings", "title": "Профиль", "emoji": "⚙️" }
     ]
   },
