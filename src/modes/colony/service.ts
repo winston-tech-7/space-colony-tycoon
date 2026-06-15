@@ -113,6 +113,14 @@ export async function collectIdleResources(telegramId: bigint) {
   const now = Date.now();
 
   for (const colony of colonies) {
+    if (colony.energy < 0) {
+      await prisma.colony.update({
+        where: { id: colony.id },
+        data: { energy: 0 },
+      });
+      colony.energy = 0;
+    }
+
     const minutes = Math.floor((now - colony.lastCollected.getTime()) / 60_000);
     if (minutes < 1) continue;
 
@@ -182,10 +190,13 @@ export async function feedCreatures(telegramId: bigint) {
     },
   });
 
-  await prisma.colony.updateMany({
-    where: { userId: telegramId },
-    data: { energy: { decrement: 5 } },
-  });
+  const colonies = await prisma.colony.findMany({ where: { userId: telegramId } });
+  for (const colony of colonies) {
+    await prisma.colony.update({
+      where: { id: colony.id },
+      data: { energy: Math.max(0, colony.energy - 5) },
+    });
+  }
 
   await bumpQuest(telegramId, "daily_feed", 1);
   await publishEvent(Number(telegramId), "creatures_fed", { fed, evolved });

@@ -45,6 +45,7 @@ import {
   listBreedCandidates,
   listEggs,
   spinWheel,
+  syncEggStatuses,
 } from "../modes/loop/service.js";
 import { telegramAuth, type AuthedRequest } from "./middleware/auth.js";
 
@@ -62,8 +63,10 @@ apiRouter.get("/modes/:id/stub", (req, res) => {
 
 apiRouter.get("/me", telegramAuth, async (req: AuthedRequest, res) => {
   const auth = req.telegramAuth!;
+  const userId = BigInt(auth.user.id);
+  await syncEggStatuses(userId);
   const profile = await ensureUser(
-    BigInt(auth.user.id),
+    userId,
     auth.user.first_name,
     auth.user.username,
   );

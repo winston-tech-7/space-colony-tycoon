@@ -38,15 +38,14 @@ function speciesForRarity(rarity: Rarity) {
   return pool[0] ?? SPECIES[0];
 }
 
-export async function listEggs(userId: bigint) {
-  const eggs = await prisma.egg.findMany({
-    where: { ownerId: userId, status: { not: EggStatus.opened } },
-    orderBy: { createdAt: "desc" },
+export async function syncEggStatuses(userId: bigint): Promise<void> {
+  const incubating = await prisma.egg.findMany({
+    where: { ownerId: userId, status: EggStatus.incubating },
   });
 
   const now = Date.now();
-  for (const egg of eggs) {
-    if (egg.status === EggStatus.incubating && egg.readyAt.getTime() <= now) {
+  for (const egg of incubating) {
+    if (egg.readyAt.getTime() <= now) {
       const rarityTier =
         egg.rarityTier ?? pickRarity(egg.id * 997 + Number(userId));
       await prisma.egg.update({
@@ -55,7 +54,10 @@ export async function listEggs(userId: bigint) {
       });
     }
   }
+}
 
+export async function listEggs(userId: bigint) {
+  await syncEggStatuses(userId);
   return prisma.egg.findMany({
     where: { ownerId: userId, status: { not: EggStatus.opened } },
     orderBy: { createdAt: "desc" },
@@ -131,6 +133,8 @@ export async function crackEgg(
   eggId: number,
   crackRequestId: string,
 ) {
+  await syncEggStatuses(userId);
+
   const prior = await prisma.egg.findFirst({
     where: { crackRequestId, ownerId: userId },
   });

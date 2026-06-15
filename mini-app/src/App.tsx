@@ -130,7 +130,12 @@ export function App() {
         />
       )}
       {activeTab === "collection" && (
-        <CollectionScreen profile={profile} initData={initData} onRefresh={refresh} />
+        <CollectionScreen
+          profile={profile}
+          initData={initData}
+          onRefresh={refresh}
+          onHaptic={() => tg?.HapticFeedback?.impactOccurred("light")}
+        />
       )}
       {activeTab === "marketplace" && (
         <TradingMode initData={initData} profile={profile} onRefresh={refresh} />

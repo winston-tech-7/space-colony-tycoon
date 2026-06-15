@@ -306,6 +306,15 @@ body {
 
 .egg-icon { font-size: 1.8rem; }
 .primary-btn.compact { width: auto; padding: 8px 14px; margin: 0; font-size: 0.8rem; }
+.primary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+.egg-card.ready {
+  border-color: rgba(255, 193, 7, 0.4);
+  background: rgba(255, 193, 7, 0.06);
+}
 
 .rank-list { display: flex; flex-direction: column; gap: 8px; }
 .rank-list.compact .rank-row { padding: 8px 0; }
@@ -696,6 +705,12 @@ body {
   border-radius: var(--radius-md);
   font-weight: 700;
   color: var(--gold);
+  margin-bottom: 12px;
+}
+.error-banner {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.35);
+  color: var(--danger);
 }
 
 /* ── Admiral ── */
