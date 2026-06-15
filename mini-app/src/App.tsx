@@ -125,6 +125,7 @@ export function App() {
         <HomeScreen
           profile={profile}
           initData={initData}
+          userId={userId}
           onRefresh={refresh}
           onNavigate={setActiveTab}
         />

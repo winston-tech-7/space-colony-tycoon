@@ -395,7 +395,11 @@ apiRouter.post("/eggs/crack", telegramAuth, async (req: AuthedRequest, res) => {
 });
 
 apiRouter.get("/breed/candidates", telegramAuth, async (req: AuthedRequest, res) => {
-  const candidates = await listBreedCandidates(BigInt(req.telegramAuth!.user.id));
+  const exclude = req.query.exclude ? Number(req.query.exclude) : undefined;
+  const candidates = await listBreedCandidates(
+    BigInt(req.telegramAuth!.user.id),
+    exclude && !Number.isNaN(exclude) ? exclude : undefined,
+  );
   res.json({ candidates });
 });
 

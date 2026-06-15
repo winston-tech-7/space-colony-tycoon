@@ -6,6 +6,7 @@ import { bumpQuest } from "./quests.js";
 const BREED_COST = 50;
 const INCUBATION_MS = 3 * 60 * 1000;
 const WHEEL_COST = 100;
+const BREEDABLE_STAGES: Stage[] = [Stage.juvenile, Stage.adult, Stage.evolved];
 
 const WHEEL_PRIZES = [
   { id: "credits_50", weight: 30, label: "+50 кредитов", credits: 50 },
@@ -95,6 +96,14 @@ export async function breedCreatures(
 
     if (!parentA || !parentB) throw new Error("Существо недоступно для скрещивания");
     if (parentA.id === parentB.id) throw new Error("Нужны два разных существа");
+    if (!BREEDABLE_STAGES.includes(parentA.stage)) {
+      throw new Error(
+        `«${parentA.name}» ещё не выросло (нужна стадия juvenile+). Покормите существ на главной.`,
+      );
+    }
+    if (!BREEDABLE_STAGES.includes(parentB.stage)) {
+      throw new Error("Партнёр ещё не вырос — выберите другое существо");
+    }
     if (!user || user.credits < BREED_COST) throw new Error("Недостаточно кредитов");
 
     const readyAt = new Date(Date.now() + INCUBATION_MS);
@@ -335,17 +344,19 @@ export async function getLeaderboard() {
   }));
 }
 
-export async function listBreedCandidates(userId: bigint) {
+export async function listBreedCandidates(userId: bigint, excludeCreatureId?: number) {
   return prisma.creature.findMany({
     where: {
       listed: false,
       status: "active",
-      stage: { in: [Stage.adult, Stage.evolved] },
-      NOT: { ownerId: userId },
+      stage: { in: BREEDABLE_STAGES },
+      ...(excludeCreatureId ? { NOT: { id: excludeCreatureId } } : {}),
     },
-    take: 20,
-    include: { owner: { select: { firstName: true, username: true } } },
-    orderBy: { id: "desc" },
+    take: 30,
+    include: {
+      owner: { select: { telegramId: true, firstName: true, username: true } },
+    },
+    orderBy: [{ ownerId: "asc" }, { id: "desc" }],
   });
 }
 
